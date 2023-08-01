@@ -1,2 +1,8 @@
-# Example
-An example greeter plugin
+# Afk Hell-rat Behemoth
+This plugin allows you to afk while fighting hell-rat behemoths for spices.  
+
+When fighting a hell-rat behemoth with a wily cat, you have about a 94.27% chance of winning the fight without feeding your cat.  This means that you really only need to feed your cat every 17th or 18th fight or so.  That's where this plugin comes in.  When things start getting dicey (drop below a user-inputted % chance to win the fight without feeding your cat), the plugin will alert you and tell you to feed your cat, meaning you can both be very afk and not lose your cat that you spent 6+ hours growing to a wily cat.  To be safe, there's also a HP threshold that you can set - if your cat drops to or below that threshold, it will notify you of that as well.  Setting either of these to 0 will essentially disable them.
+
+Using calculated hit chances, max hits, and the cat stats given on the wiki, I've simulated 10,000,000 fights of every possible combination of HP values for both the cat and the hell-rat, which comes out to 6.9 billion total simulations (nice).  I did this for every cat and all of that data is in the plugin... but spoiler alert, only a Wily cat is worth bringing.  All of these simulations were done in advance and are hard-coded into the plugin, so the plugin doesn't need to run thousands of simulations (or more) every time HP values change to give you an accurate prediction.
+
+To give you maximum afk-ness, I've even added an option to notify you once the cat has killed the behemoth hell-rat.
