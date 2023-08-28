@@ -6,6 +6,7 @@ import java.text.NumberFormat;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.events.AnimationChanged;
+import net.runelite.api.events.GameTick;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -56,6 +57,9 @@ public class AfkHellratBehemothPlugin extends Plugin
 	// used to detect changes in player orientation.  if you run away from the fight, it changes, UI closes/vars reset
 	public static int playerOrientation = 0;
 
+	public static Actor hellratActor;
+
+
 
 	@Override
 	protected void startUp()
@@ -74,44 +78,18 @@ public class AfkHellratBehemothPlugin extends Plugin
 		// log.info("Afk Hell-Rat Behemoth Plugin started!");
 	}
 
-	@Subscribe
-	public void onAnimationChanged(AnimationChanged event){
-		Actor actor = event.getActor();
-		if (actor == client.getLocalPlayer()){
-			/*
-			this actually triggers at the beginning of the fight as you insert your cat (insert anim).
-			this will prime our data to get the orientation at the start of the fight before the cat gets in combat.
-			if at that point your character's animation changes, it will check for orientation.
-			if you're not facing the same way (running/walking away), it will stop the UI/reset variables.
-			as easy as it would be, you can't just trigger it to reset on any anim change, as apparently
-			you can alch while watching your cat fight
-			*/
-			int oldPlayerOrientation = playerOrientation;
-			playerOrientation = actor.getCurrentOrientation();
-			if (playerOrientation != oldPlayerOrientation){
-				// if our character orientation has changed, you're running away from the fight.
-				// UI closes, warnings reset.
-				cat_success_warning = false;
-				cat_health_warning = false;
-				cat_in_combat = false;
-				return;
-			}
-		}
-		if (!Objects.equals(actor.getName(), "Hell-Rat Behemoth")) return;
-		if (actor.getAnimation() == 2705 || actor.getAnimation() == 2706){
-			// the above are the animations for hell-rat attacking and defending.  2706 is def, 2705 is att
-			// realistically, there's probably a way to make this even more accurate by determining cat/rat atk anims
-			// and realizing who has the next attack.  but i think in its current state this is more than enough
-			// cat atk/def anim = 315/316... confirmed for wily/kitten/overgrown/normal... should I call on those too?
 
+	@Subscribe
+	public void onGameTick(GameTick tick) {
+		if (cat_in_combat){
 			NPC active_cat = client.getFollower();
 
 			// Get max health and current health - I think their hp are low enough that rounding should always
 			//   give the exact hp amount
 			int cat_max_health = active_cat.getHealthScale();
 			int cat_actual_health = active_cat.getHealthRatio();
-			int rat_max_health = actor.getHealthScale();
-			int rat_actual_health = actor.getHealthRatio();
+			int rat_max_health = hellratActor.getHealthScale();
+			int rat_actual_health = hellratActor.getHealthRatio();
 
 			// if cat hasn't been attacked yet, its health is full, let's just treat it like that
 			if (cat_max_health == -1) cat_max_health = 30;
@@ -197,7 +175,44 @@ public class AfkHellratBehemothPlugin extends Plugin
 				// cat is above acceptable success threshold.  reset variable so we get pinged if it falls below again
 				cat_success_warning = false;
 			}
+
+		}
+	}
+	@Subscribe
+	public void onAnimationChanged(AnimationChanged event){
+		Actor actor = event.getActor();
+		if (actor == client.getLocalPlayer()){
+			/*
+			this actually triggers at the beginning of the fight as you insert your cat (insert anim).
+			this will prime our data to get the orientation at the start of the fight before the cat gets in combat.
+			if at that point your character's animation changes, it will check for orientation.
+			if you're not facing the same way (running/walking away), it will stop the UI/reset variables.
+			as easy as it would be, you can't just trigger it to reset on any anim change, as apparently
+			you can alch while watching your cat fight
+			*/
+			int oldPlayerOrientation = playerOrientation;
+			playerOrientation = actor.getCurrentOrientation();
+			if (playerOrientation != oldPlayerOrientation){
+				// if our character orientation has changed, you're running away from the fight.
+				// UI closes, warnings reset.
+				cat_success_warning = false;
+				cat_health_warning = false;
+				cat_in_combat = false;
+				return;
+			}
+		}
+		if (!Objects.equals(actor.getName(), "Hell-Rat Behemoth")) return;
+		if (actor.getAnimation() == 2705 || actor.getAnimation() == 2706){
+			// the above are the animations for hell-rat attacking and defending.  2706 is def, 2705 is att
+			// realistically, there's probably a way to make this even more accurate by determining cat/rat atk anims
+			// and realizing who has the next attack.  but i think in its current state this is more than enough
+			// cat atk/def anim = 315/316... confirmed for wily/kitten/overgrown/normal... should I call on those too?
+
+			// as of 8/28/23 I'm changing the UI to trigger on every game tick instead of just atk/def anims
+			// so if i were to change it to determine who has next atk etc., i would need to change it back
+			// to updating UI/determining odds in this section
 			cat_in_combat = true;
+			hellratActor = actor;
 		}
 		else if (actor.getAnimation() == 2707){
 			// Hell-rat dying anim
